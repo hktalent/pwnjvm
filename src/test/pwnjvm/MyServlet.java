@@ -11,9 +11,10 @@ import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-/**
- * 
+/* @Description: 针对URI中特定词语的过滤器。此处只做简单测试用。
+ * Filter for contents in URI. Simply testing use only.
  */
+
 public class MyServlet implements Filter {
 
 	
@@ -65,7 +66,7 @@ public class MyServlet implements Filter {
            	System.out.println(url+" is fine.");
             chain.doFilter(request, response);
            }else{
-        	response.sendRedirect("error.jsp");	//将被拦截的内容重定向到错误页面
+        	response.sendRedirect("error.jsp");	//Redirect to error.jsp
            	chain.doFilter(request, response);
            }
       	}
