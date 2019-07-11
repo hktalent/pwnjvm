@@ -8,5 +8,15 @@
 	</classpathentry>
 	<classpathentry kind="con" path="org.eclipse.jst.j2ee.internal.web.container"/>
 	<classpathentry kind="con" path="org.eclipse.jst.j2ee.internal.module.container"/>
+	<classpathentry kind="lib" path="lib/weblogic_1.0.jar"/>
+	<classpathentry kind="lib" path="lib/weblogic_spring-jndi_10.3.6.0.jar"/>
+	<classpathentry kind="lib" path="lib/weblogic_spring-jndi_12.2.1.3.jar"/>
+	<classpathentry kind="lib" path="lib/javassist-3.19.0-GA.jar"/>
+	<classpathentry kind="lib" path="lib/javax.servlet-api-3.1.0.jar"/>
+	<classpathentry kind="lib" path="lib/weblogic_sip.jar"/>
+	<classpathentry kind="lib" path="lib/weblogic-spring.jar"/>
+	<classpathentry kind="lib" path="lib/weblogic.jar"/>
+	<classpathentry kind="lib" path="lib/xalan-2.7.2.jar"/>
+	<classpathentry kind="lib" path="lib/ysoserial-0.0.6-SNAPSHOT-all.jar"/>
 	<classpathentry kind="output" path="build/classes"/>
 </classpath>
