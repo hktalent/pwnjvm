@@ -64,7 +64,7 @@ public class MyTest {
 //		System.out.println(javax.xml.bind.DatatypeConverter.printBase64Binary("xxxx".getBytes()));
 		
 //		System.out.println(new String(javax.xml.bind.DatatypeConverter.parseBase64Binary("eHh4eA==")));
-//		System.out.println(getBase64(Svlt.class.getName()));
+		System.out.println(getBase64(Svlt.class.getName()));
 		
 	}
 
