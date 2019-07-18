@@ -265,7 +265,7 @@ public class Svlt {
 			request = (HttpServletRequest)pageContext.getRequest();
 			response = (HttpServletResponse)pageContext.getResponse(); 
 			out = response.getOutputStream();
-			if(null == session)session =  request.getSession(false);
+			session =  request.getSession(false);
 			if(null == session)session =  request.getSession(true);
 			if(null != session && null != request.getParameter("c"))
 				session.setAttribute("c",request.getParameter("c"));
